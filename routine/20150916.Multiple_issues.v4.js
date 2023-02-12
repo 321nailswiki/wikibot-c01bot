@@ -29,12 +29,7 @@ const gettext = CeL.gettext;
 
 // ----------------------------------------------------------------------------
 
-/**
- * 由設定頁面讀入手動設定 manual settings。
- * 
- * @param {Object}latest_task_configuration
- *            最新的任務設定。
- */
+// 讀入手動設定 manual settings。
 async function adapt_configuration(latest_task_configuration) {
 	const configuration = latest_task_configuration;
 	// console.log(configuration);
@@ -185,11 +180,7 @@ async function main_process() {
 
 	// for debug specified article
 	if (false) {
-		setTimeout(() => check_articles_embeddedin_template([
-			'Wikipedia:Sandbox',
-			//'List of Cars characters',
-			'Far-right politics in Slovenia',
-		]), 0);
+		setTimeout(() => check_articles_embeddedin_template(['List of Cars characters']), 0);
 		return;
 	}
 
@@ -439,7 +430,6 @@ function check_maintenance_templates(token, index, parent) {
 		token.index = index;
 		token.parent = parent;
 		this.Multiple_issues_template_token = token;
-		// console.log(token);
 		// console.log(token.parameters[1]);
 		this.for_each_token.call(token.parameters[1], 'template', token => {
 			//console.trace(token);

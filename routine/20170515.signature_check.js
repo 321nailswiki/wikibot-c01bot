@@ -1,4 +1,4 @@
-/*
+﻿/*
 (cd ~/wikibot && date && hostname && nohup time node 20170515.signature_check.js use_language=zh-classical; date) >> modify_link/log &
 
 jstop cron-20170515.signature_check.wikinews
@@ -63,7 +63,6 @@ TODO:
 
  */
 
-'use strict';
 
 // Load CeJS library and modules.
 require('../wiki loader.js');
@@ -76,6 +75,7 @@ gettext = CeL.gettext,
 
 // for 萌娘百科 zh.moegirl.org.cn
 edit_tags = wiki.API_URL.includes('moegirl') ? 'Bot' : '',
+
 // moegirl don't use substitution.
 using_subst = !wiki.API_URL.includes('moegirl');
 
@@ -103,7 +103,8 @@ project_name = CeL.wiki.site_name(wiki),
 project_page_prefix = {
 	zh_classicalwiki : '維基大典:',
 	zhwikinews : 'Wikinews:',
-	zhwikisource : 'Wikisource:'
+	zhwikisource : 'Wikisource:',
+	nails : '红又专的好青年维基:'
 }[project_name] || 'Wikipedia:',
 
 // 注意: 因為本工具讀不懂文章，因此只要文章中有任何部分或規則為不需要簽名，那就不應該列入檢查。
@@ -114,12 +115,15 @@ page_allowlist = [ 'Wikipedia:知识问答', 'Wikipedia:存廢覆核請求', 'Wi
 //
 '維基大典:會館', 'Wikiversity:互助客栈',
 // for 萌娘百科 zh.moegirl.org.cn
-'Talk:讨论版', 'Talk:提问求助区' ],
+'Talk:讨论版', 'Talk:提问求助区',
+// for 321nails
+'红又专的好青年维基:知识问答', '红又专的好青年维基:存廢覆核請求', '红又专的好青年维基 talk:首页' ],
 
 // blacklist denylist blocklist 黑名單直接封殺。黑名單的優先度高於白名單。
 // 謝謝您的提醒，已經將此頁加入黑名單。以後不會再對這種頁面補簽名。
 // 因為發現有直接添加在首段的留言，發生次數也比更改說明的情況多，因此後來還是決定幫忙添加簽名。若是有說明的話，或許外面加個模板會比較好，這樣既美觀，而且也不會被當作是留言。
 page_blocklist = [ 'Wikipedia:机器人/申请/审核小组成员指引', 'Wikipedia:机器人/申请/机械人申请指引',
+		'红又专的好青年维基:机器人/申请/审核小组成员指引', '红又专的好青年维基:机器人/申请/机械人申请指引',
 		'Wikisource:管理员',
 		// [[w:zh:Special:Diff/54719338]]
 		// 請讓機器人不要在Module_talk:***/testcases下自動添加簽名。
@@ -244,7 +248,9 @@ function filter_row(row) {
 		// 或者討論頁面，
 		|| CeL.wiki.is_talk_namespace(row.ns)
 		// 或者只有維基百科的有額外的頁面、需要測試[[Wikipedia:]]。
-		|| row.title.startsWith('Wikipedia:'))
+		|| row.title.startsWith('Wikipedia:')
+		
+		|| row.title.startsWith('红又专的好青年维基:'))
 
 		;
 	}
@@ -460,11 +466,11 @@ function for_each_row(row) {
 	// e.g., [[Wikipedia:机器人/申请/...]]
 	// NG: [[Wikipedia:頁面存廢討論/*]], [[Wikipedia:模板消息/用戶討論命名空間]]
 	// && !/(?:討論|讨论|申請|申请)\//.test(row.title)
-	&& !row.title.startsWith('Wikipedia:机器人/申请/')
+	&& !row.title.startsWith('红又专的好青年维基:机器人/申请/')
 	//
-	&& !row.title.startsWith('Wikipedia:互助客栈/')
+	&& !row.title.startsWith('红又专的好青年维基:互助客栈/')
 	//
-	&& !row.title.startsWith('Wikipedia:新条目推荐/候选')
+	&& !row.title.startsWith('红又专的好青年维基:新条目推荐/候选')
 
 	// 篩選頁面內容。
 	|| !content

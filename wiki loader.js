@@ -43,9 +43,6 @@ set_language('ja');
 
 'use strict';
 
-// 出來的是內部網路IP。
-// console.trace(require('os').networkInterfaces());
-
 var _global = typeof globalThis === 'object' && globalThis
 		|| Function('return this')();
 

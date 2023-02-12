@@ -2,7 +2,6 @@
 
 node 20210429.Auto-archiver.js use_language=zh
 node 20210429.Auto-archiver.js use_language=ks
-node 20210429.Auto-archiver.js use_language=en
 node 20210429.Auto-archiver.js use_project=wikidata
 node 20210429.Auto-archiver.js use_project=zh.wikiversity
 node 20210429.Auto-archiver.js use_project=zh.wikinews
@@ -38,12 +37,7 @@ let archive_template_name = 'Auto-archive';
 
 // ----------------------------------------------------------------------------
 
-/**
- * 由設定頁面讀入手動設定 manual settings。
- * 
- * @param {Object}latest_task_configuration
- *            最新的任務設定。
- */
+// 讀入手動設定 manual settings。
 async function adapt_configuration(latest_task_configuration) {
 	//console.log(wiki.latest_task_configuration);
 

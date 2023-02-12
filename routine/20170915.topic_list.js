@@ -7,7 +7,7 @@ jstop cron-20170915.topic_list.zh-classical;
 jstop cron-20170915.topic_list.wikinews;
 jstop cron-20170915.topic_list.ja;
 jstop cron-20170915.topic_list.en;
-jstop cron-20170915.topic_list.test;
+#jstop cron-20170915.topic_list.test;
 jstop cron-20170915.topic_list.wikisource;
 jstop cron-20170915.topic_list.wikiversity;
 jstop cron-20170915.topic_list.commons;
@@ -17,14 +17,15 @@ jstop cron-20170915.topic_list.wikibooks;
 
 /usr/bin/jstart -N cron-20170915.topic_list.zh -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_language=zh
 /usr/bin/jstart -N cron-20170915.topic_list.zh-classical -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_language=zh-classical
+/usr/bin/jstart -N cron-20170915.topic_list.wikinews -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=wikinews
 /usr/bin/jstart -N cron-20170915.topic_list.ja -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_language=ja
 /usr/bin/jstart -N cron-20170915.topic_list.en -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_language=en
 /usr/bin/jstart -N cron-20170915.topic_list.testwiki -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_language=en use_project=test
-/usr/bin/jstart -N cron-20170915.topic_list.wikinews -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=zh.wikinews
-/usr/bin/jstart -N cron-20170915.topic_list.wikisource -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=zh.wikisource
-/usr/bin/jstart -N cron-20170915.topic_list.wikiversity -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=zh.wikiversity
+/usr/bin/jstart -N cron-20170915.topic_list.wikisource -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=wikisource
+/usr/bin/jstart -N cron-20170915.topic_list.wikiversity -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=wikiversity
 /usr/bin/jstart -N cron-20170915.topic_list.commons -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=commons
-/usr/bin/jstart -N cron-20170915.topic_list.wiktionary -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=zh.wiktionary
+#/usr/bin/jstart -N cron-20170915.topic_list.moegirl -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=zhmoegirl
+/usr/bin/jstart -N cron-20170915.topic_list.wiktionary -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=wiktionary
 /usr/bin/jstart -N cron-20170915.topic_list.wikibooks -mem 2g -once -quiet /usr/bin/node /data/project/toc/wikibot/routine/20170915.topic_list.js use_project=zh.wikibooks
 
 2017/9/10 22:31:46	開始計畫。
@@ -198,18 +199,10 @@ var section_column_operators = {
 	},
 	// 議題的標題。
 	title : function(section) {
-		// 2023/1/26 在頁面被 transclusion 的時候，空白不會被自動轉為 "_"。
-		function convert_anchor(link) {
-			return link.replace(/#[^|]+/, function(all) {
-				return all.replace(/ /g, '_');
-			});
-		}
-
 		// [[Template:Small]]
 		function small_title(title, set_small) {
 			// call function section_link_toString(page_title, style)
-			title = title.toString(null, CSS_toString(section.CSS), true);
-			// console.trace(title);
+			title = title.toString(null, CSS_toString(section.CSS));
 			return set_small ? '<small>' + title + '</small>' : title;
 		}
 
@@ -242,7 +235,6 @@ var section_column_operators = {
 					// @see section_link_toString() @ CeL.wiki
 					adding_link += '#' + section.section_title.link[1];
 				}
-				adding_link = convert_anchor(adding_link);
 				var display_text = adding_link.replace(/#.*$/, '');
 				title_too_long = if_too_long(display_text);
 				adding_link = CSS_toString(section.CSS) ? '[[' + adding_link
@@ -269,12 +261,6 @@ var section_column_operators = {
 		} else
 			style = '';
 		// style += CSS_toString(section.CSS);
-
-		if (section.has_集中討論重定向模板) {
-			// [[w:zh:Template:集中討論重定向]]
-			title = '[[File:Treffpunkt.svg|20px|link=|alt=集中討論重定向|集中討論重定向]] '
-					+ title;
-		}
 
 		return (style ? 'style="' + style + '" | ' : '') + title;
 	},
@@ -333,12 +319,7 @@ function traversal_all_pages() {
 
 var had_adapted;
 
-/**
- * 由設定頁面讀入手動設定 manual settings。
- * 
- * @param {Object}latest_task_configuration
- *            最新的任務設定。
- */
+// 讀入手動設定 manual settings。
 function adapt_configuration(latest_task_configuration) {
 	configuration = latest_task_configuration;
 	// console.log(configuration);
@@ -540,7 +521,6 @@ function start_main_work() {
 	// main_talk_pages = [ 'Wikipedia:Bot/使用申請' ];
 	// main_talk_pages = [ '萌娘百科 talk:讨论版/页面相关' ];
 	// main_talk_pages = [ 'Wikipedia:可靠来源/布告板' ];
-	// main_talk_pages = [ 'Wikipedia:特色列表评选/提名区' ];
 
 	// ----------------------------------------------------
 
@@ -671,7 +651,7 @@ function get_special_users(callback, options) {
 	// TODO: 這裡的篩選方法會把頁面中所有的使用者都納入這個群體，包括不活躍與離職的。
 	// TODO: using [[Template:BAG_topicon]]
 	wiki.page('Project:BAG', function(page_data) {
-		var title = wiki.title_of(page_data),
+		var title = CeL.wiki.title_of(page_data),
 		/**
 		 * {String}page content, maybe undefined. 條目/頁面內容 =
 		 * CeL.wiki.revision_content(revision)
@@ -780,16 +760,6 @@ function general_row_style(section, section_index) {
 			// style = '';
 			// 此模板代表一種決定性的狀態，可不用再檢查其他內容。
 			return to_exit;
-		}
-
-		// [[w:zh:Template:集中討論重定向]]
-		if (token.type === 'transclusion' && (token.name in {
-			CDTR : true,
-			集中讨论重定向 : true,
-			集中討論重定向 : true
-		})) {
-			section.has_集中討論重定向模板 = true;
-			return;
 		}
 
 		if (token.type === 'transclusion' && (token.name in {
@@ -1388,7 +1358,7 @@ function detect_sub_pages_to_fetch(page_title_list, error) {
 }
 
 function listen_to_sub_page(sub_page_data, main_page_data) {
-	var sub_page_title = wiki.title_of(sub_page_data);
+	var sub_page_title = CeL.wiki.title_of(sub_page_data);
 	// assert: !!(sub_page_title && main_page_data) === true
 	if (!sub_page_title || !main_page_data) {
 		throw new Error(
@@ -1695,10 +1665,11 @@ function generate_topic_list(page_data) {
 		});
 	}
 
-	var edit_options = {
-		// for .page()
-		redirects : 1,
-
+	wiki.page(topic_page, {
+		redirects : 1
+	}).edit(
+	// TODO: CeL.wiki.array_to_table(section_table)
+	section_table.join('\n').trim(), {
 		bot : 1,
 		nocreate : 1,
 		tags : edit_tags,
@@ -1713,10 +1684,7 @@ function generate_topic_list(page_data) {
 		+ (new_topics.length > 0
 		//
 		? '; new reply: ' + new_topics.join(', ') : '')
-	};
-	wiki.page(topic_page, edit_options).edit(
-	// TODO: CeL.wiki.array_to_table(section_table)
-	section_table.join('\n').trim(), edit_options, function(data, error) {
+	}, function(data, error) {
 		if (error)
 			return;
 		clearTimeout(exit_program_timer);
@@ -1725,7 +1693,7 @@ function generate_topic_list(page_data) {
 			CeL.error('經過' + CeL.age_of(0, timeout_interval)
 			//
 			+ '都無成功的編輯！直接跳出！');
-			process.exit(3);
+			process.exit();
 		}, timeout_interval);
 	})
 	// 更新所嵌入的頁面。通常是主頁面。

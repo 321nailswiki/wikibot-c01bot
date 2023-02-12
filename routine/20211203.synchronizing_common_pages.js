@@ -33,12 +33,7 @@ const DEFAULT_min_interval = '1 week';
 
 let summary_prefix;
 
-/**
- * 由設定頁面讀入手動設定 manual settings。
- * 
- * @param {Object}latest_task_configuration
- *            最新的任務設定。
- */
+// 讀入手動設定 manual settings。
 async function adapt_configuration(latest_task_configuration) {
 	const { general } = latest_task_configuration;
 	if (!general)
@@ -387,10 +382,10 @@ async function edit_page(source_page_title, target_page_title, options) {
 				//nocreate: 1,
 				summary: summary_prefix
 					// 自中文維基百科匯入Template:Fullurl2的版本58191651
-					+ source_page_link + ' '
+					+ source_page_link + ' ' + new Date(revision.timestamp).format('%Y-%2m-%2d') + ' '
 					+ CeL.wiki.title_link_of(source_site_info.interwiki_prefix + 'Special:PermanentLink/' + revision.revid,
 						// gettext_config:{"id":"revision-id-$1"}
-						CeL.gettext('Revision id %1', revision.revid) && new Date(revision.timestamp).format('%Y-%2m-%2d'))
+						CeL.gettext('Revision id %1', revision.revid))
 					// 加上原版本註解
 					+ (revision.comment ? ` (${revision.comment})` : '')
 					+ (replace_text.length > 0 ? ' '

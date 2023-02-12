@@ -24,12 +24,6 @@ var
 /** {Object}設定頁面所獲得之手動設定 manual settings。 */
 configuration;
 
-/**
- * 由設定頁面讀入手動設定 manual settings。
- * 
- * @param {Object}latest_task_configuration
- *            最新的任務設定。
- */
 function adapt_configuration_to_page(_configuration) {
 	configuration = _configuration;
 }
@@ -751,7 +745,6 @@ var jawiki_week_AFD_options = {
 			return vote_count || '';
 		}
 	},
-	// TODO: using expand_transclusion()
 	preprocess_section_link_token : function(token) {
 		if (token.type === 'transclusion') {
 			// console.log(token);
@@ -1212,27 +1205,6 @@ function BRFA_section_filter(section) {
 	return section.bot_name && applicants.length > 0;
 }
 
-// 各種 protect、各語系通用的 status。
-function check_general_status(section, section_index) {
-	var status, to_exit = this.each.exit, project = this.page.page_configuration.project;
-	this.each.call(section, 'template', function(token) {
-		// TODO: {{移動至|Namespace:Pagename#Topic}}
-
-		// {{Moved to}}, {{Moved discussion to}}
-		if (/^Moved? ?([a-z]+ )?to/i.test(token.name)) {
-			status = 'style="color: #888;" | '
-			// [[File:Symbol redirect vote.svg|20px|link=|alt=]]&nbsp;
-			// + (use_language === 'zh' ? '已移動' : 'Moved')
-			// zhmoegirl: 模板:Movedto 需要目標頁面。
-			+ (project === 'zhmoegirl' ? '已移動' : '{{' + token.name + '}}')
-			section.moved = true;
-		}
-
-	});
-
-	return status;
-}
-
 function check_BOTREQ_status(section, section_index) {
 	var status, to_exit = this.each.exit, project = this.page.page_configuration.project;
 	this.each.call(section, 'template', function(token) {
@@ -1389,6 +1361,17 @@ function check_BOTREQ_status(section, section_index) {
 			status = token.toString();
 		}
 
+		// TODO: [[Template:Moved discussion to]], [[模板:移動至]]
+		// {{移動至|Namespace:Pagename#Topic}}
+		// {{Moved discussion to}}, {{Moved discussion to}}
+		if (/^Moved? ?([a-z]+ )?to/i.test(token.name)) {
+			status = 'style="color: #888;" | '
+			// [[File:Symbol redirect vote.svg|20px|link=|alt=]]&nbsp;
+			// + (use_language === 'zh' ? '已移動' : 'Moved')
+			+ '{{' + token.name + '}}';
+			section.moved = true;
+		}
+
 		if (token.name in {
 			Atop : true,
 			'Archive top' : true
@@ -1401,8 +1384,7 @@ function check_BOTREQ_status(section, section_index) {
 		}
 
 	});
-
-	return status || check_general_status.apply(this, arguments);
+	return status || '';
 }
 
 // 議體進度狀態(Status:Approved for trial/Trial complete/Approved/...)
@@ -1553,6 +1535,15 @@ function check_MarkAsResolved_status(section, section_index) {
 			section.archived = true;
 		}
 
+		if (/^Moved? ?([a-z]+ )?to/i.test(token.name)) {
+			status = 'style="color: #888;" | '
+			// [[File:Symbol redirect vote.svg|20px|link=|alt=]]&nbsp;
+			// + (use_language === 'zh' ? '已移動' : 'Moved')
+			// zhmoegirl: 模板:Movedto 需要目標頁面。
+			+ (project === 'zhmoegirl' ? '已移動' : '{{' + token.name + '}}')
+			section.moved = true;
+		}
+
 		// [[萌娘百科_talk:讨论版/权限变更]]
 		if (token.name in {
 			状态 : true
@@ -1602,11 +1593,17 @@ function check_MarkAsResolved_status(section, section_index) {
 			return to_exit;
 		}
 
+		// TODO: [[Template:Moved discussion to]], [[模板:移動至]]
+		// {{移動至|Namespace:Pagename#Topic}}
+
 	});
 
 	// {{保留}}{{刪除}}只是用於討論過程而並非結果，不應該像{{MAR}}一樣作為【進度】在討論版首頁顯示。
-	// 因此不該用 check_BOTREQ_status() 而是用 check_general_status()。
-	return status || check_general_status.apply(this, arguments);
+	if (false && !status) {
+		status = check_BOTREQ_status.call(this, section, section_index);
+	}
+
+	return status;
 }
 
 // --------------------------------------------------------------------------------------
@@ -1684,11 +1681,8 @@ function get_FC_votes_on_date(section, date, support_only) {
 				.reduce(filter_via_date, 0) : 0;
 		oppose = oppose ? section.vote_list.oppose.reduce(filter_via_date, 0)
 				: 0;
-		if (false) {
-			console.trace(section.vote_list);
-			CeL.info(section.section_title.title + ': support: ' + support
-					+ ', oppose: ' + oppose);
-		}
+		// console.log(section.vote_list.oppose);
+		// CeL.info(section.section_title.title + ': oppose: ' + oppose);
 	} else {
 		support = support ? section.vote_list.support.length : 0;
 		oppose = oppose ? section.vote_list.oppose.length : 0;
@@ -1837,9 +1831,7 @@ function FC_section_filter(section) {
 	// --------------------------------
 
 	var page_configuration = this.page.page_configuration;
-	var latest_vote, cross_out_vote_list, _this = this, skip_inner = this.each.exit,
-	// 預防可能有同一行裡 "{{yesFL}}<s>{{yesFA}}</s>" 的情況，前一個的日期因跳過 latest_vote 而不會被設定到。
-	votes_without_date = [];
+	var latest_vote, cross_out_vote_list, _this = this, skip_inner = this.each.exit;
 	this.each.call(section, function(token, index, parent) {
 		// TODO: 投票人資格審查。
 		// assert: 先投票之後才記錄使用者以及時間。
@@ -1869,19 +1861,11 @@ function FC_section_filter(section) {
 				}
 			} else if ((typeof token === 'string' || token.type === 'plain')
 			// 只要還沒換行，就以最後面的為主。
-			&& (!latest_vote.vote_date || !latest_vote.passed_new_line
-			// || votes_without_date.length > 0
-			)) {
+			&& (!latest_vote.vote_date || !latest_vote.passed_new_line)) {
 				// console.log('check date: ' + token);
 				date = CeL.wiki.parse.date(token.toString());
 				if (date) {
-					if (!latest_vote.vote_date)
-						latest_vote.vote_date = date;
-					votes_without_date.forEach(function(token) {
-						if (!token.vote_date)
-							token.vote_date = date;
-					});
-					votes_without_date = [];
+					latest_vote.vote_date = date;
 					// assert: {Date}latest_vote.vote_date
 					// console.log(latest_vote);
 				}
@@ -1921,12 +1905,10 @@ function FC_section_filter(section) {
 			cross_out_vote(section, token);
 			// 還是得設定 user, date。
 			latest_vote = token;
-			votes_without_date.push(token);
 		} else if (token.name in page_configuration.support_templates) {
 			token.vote_type = VOTE_SUPPORT;
 			section.vote_list.support.push(token);
 			latest_vote = token;
-			votes_without_date.push(token);
 			cross_out_vote_list && cross_out_vote_list.push(token);
 
 		} else if (token.name in page_configuration.oppose_templates) {
@@ -1936,7 +1918,6 @@ function FC_section_filter(section) {
 			token.vote_type = VOTE_OPPOSE;
 			section.vote_list.oppose.push(token);
 			latest_vote = token;
-			votes_without_date.push(token);
 			cross_out_vote_list && cross_out_vote_list.push(token);
 
 		} else if (token.name in
@@ -1967,13 +1948,10 @@ function FC_section_filter(section) {
 			cross_out_vote_list = null;
 			// reset latest vote
 			latest_vote = null;
-		} else {
-			// console.trace(token);
 		}
 
 	});
 
-	// console.trace(section.vote_list);
 	// console.log(section.section_title.title + ': oppose:');
 	// console.log(section.vote_list.oppose);
 

@@ -436,8 +436,6 @@ async function check_deletion_discussion_page(page_data) {
 			cc: true, ir: true, rr: true, rep: true, k: true, sk: true, os: true,
 			// [[User_talk:Kanashimi#維護討論頁之存廢討論紀錄與模板]]
 			cv: true,
-			// 重新提交討論
-			relist: true,
 		})
 			// e.g., 提刪者撤回 提請者收回 請求無效 無效提名 重複提出，無效 全部重複／未到期，請求無效
 			// 提案者重复提出，请求失效。见下。 改掛關注度模板，三十天後再議
@@ -907,7 +905,7 @@ async function generate_report() {
 		// __NOTITLECONVERT__
 		'__NOCONTENTCONVERT__\n'
 		+ `總共編輯${page_count}個討論頁，列出其中${report_count}筆特別情況紀錄。\n`
-		+ '* 本頁面會定期更新，毋須手動修正。\n'
+		+ '* 本條目會定期更新，毋須手動修正。\n'
 		// [[WP:DBR]]: 使用<onlyinclude>包裹更新時間戳。
 		+ '* 產生時間：<onlyinclude>~~~~~</onlyinclude>\n\n<!-- report begin -->\n'
 		+ report_wikitext + '\n<!-- report end -->', {

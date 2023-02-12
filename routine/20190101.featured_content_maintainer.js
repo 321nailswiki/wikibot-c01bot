@@ -196,12 +196,7 @@ wiki.run(main_work);
 
 // ---------------------------------------------------------------------//
 
-/**
- * 由設定頁面讀入手動設定 manual settings。
- * 
- * @param {Object}latest_task_configuration
- *            最新的任務設定。
- */
+// 讀入手動設定 manual settings。
 function adapt_configuration(latest_task_configuration) {
 	configuration = latest_task_configuration;
 	// console.log(configuration);
@@ -1585,7 +1580,7 @@ function update_portal() {
 		function(all, type_tag, type, tail) {
 			var list;
 			type = type.trim();
-			// 機器人會定期更新典範條目、特色列表頁面。本註解必須以本欄項目開頭，方便機器人辨識。若您有想要固定顯示的項目，可以列在本註解前面。本註解前的內容不會列入計數。
+			// 機器人會定期更新典範條目、特色列表。本註解必須以本欄項目開頭，方便機器人辨識。若您有想要固定顯示的項目，可以列在本註解前面。本註解前的內容不會列入計數。
 			// 用了個技巧處理這個問題，您參考看看。這樣的編輯彈性比較大。但仍必須手動撤下特別要顯示的條目。
 			if (type.startsWith('典範條目')) {
 				list = title_lists.FA;

@@ -79,9 +79,8 @@ function page_data_to_String(page_data) {
 }
 
 function main_work(template_name_redirect_to) {
-	// console.trace(wiki.cache);
 
-	wiki.cache([ {
+	CeL.wiki.cache([ {
 		type : 'redirects_here',
 		list : template_name_redirect_to.template_publish,
 		reget : true,
@@ -181,7 +180,7 @@ function main_work(template_name_redirect_to) {
 		// default options === this
 		namespace : 0,
 		// [SESSION_KEY]
-		// session : wiki,
+		session : wiki,
 		// title_prefix : 'Template:',
 		// cache path prefix
 		prefix : base_directory
@@ -220,7 +219,7 @@ function archive_pages() {
 				CeL.info('for_each_page_not_archived: Write report: '
 						+ error_count + ' lines.');
 				if (error_count > 0) {
-					error_logs.unshift('<!-- 本頁面會定期更新，毋須手動修正。 -->\n'
+					error_logs.unshift('<!-- 本條目會定期更新，毋須手動修正。 -->\n'
 							+ '請幫忙修復這些文章。機器人將在修復完畢、待時限過後自動保護。 --~~~~');
 					error_logs.push(
 					//

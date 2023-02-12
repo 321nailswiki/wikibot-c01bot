@@ -75,12 +75,7 @@ report_lines.skipped_records = 0;
 
 // ----------------------------------------------
 
-/**
- * 由設定頁面讀入手動設定 manual settings。
- * 
- * @param {Object}latest_task_configuration
- *            最新的任務設定。
- */
+// 讀入手動設定 manual settings。
 async function adapt_configuration(latest_task_configuration) {
 	// console.log(wiki);
 
@@ -1175,7 +1170,7 @@ const class_alias_to_normalized = {
 
 // maintain vital articles templates: FA|FL|GA|List,
 // add new {{Vital articles|class=unassessed}}
-// or via {{WikiProject banner shell|class=}}, ({{WikiProject *|class=start}})
+// or via ({{WikiProject *|class=start}})
 function maintain_VA_template_each_talk_page(talk_page_data, main_page_title) {
 	// For [[Talk:Philippines]]
 	//console.trace(wiki.FC_data_hash[main_page_title]);
@@ -1241,16 +1236,13 @@ function maintain_VA_template_each_talk_page(talk_page_data, main_page_title) {
 
 		} else if (wiki.is_template('WikiProject banner shell', token)) {
 			WikiProject_banner_shell_token = token;
-			// {{WikiProject banner shell|class=*}}
-			if (token.parameters.class)
-				class_from_other_templates = token.parameters.class;
+			// {{WikiProject banner shell}} has no .class
 
 		} else if (token.parameters.class
 			// e.g., {{WikiProject Africa}}, {{AfricaProject}}, {{maths rating}}
 			&& /project|rating/i.test(token.name)) {
 			// TODO: verify if class is the same.
-			if (token.parameters.class)
-				class_from_other_templates = token.parameters.class;
+			class_from_other_templates = token.parameters.class;
 		}
 	});
 	// console.log([class_from_other_templates, VA_template_token]);
@@ -1285,10 +1277,9 @@ function maintain_VA_template_each_talk_page(talk_page_data, main_page_title) {
 		}
 	}
 	if (article_info.link) {
-		// 關於link與anchor參數，一開始是因為機器人沒設定topic的方法。現在有方法了。
-		// VA_template_object.link = article_info.link[0];
+		VA_template_object.link = article_info.link[0];
 		if (article_info.link[1]) {
-			// VA_template_object.anchor = article_info.link[1];
+			VA_template_object.anchor = article_info.link[1];
 			article_info.reason += `: [[${VA_template_object.link}#${VA_template_object.anchor}|${VA_template_object.anchor}]]`;
 		} else {
 			article_info.reason += `: [[${VA_template_object.link}]]`;
@@ -1301,9 +1292,7 @@ function maintain_VA_template_each_talk_page(talk_page_data, main_page_title) {
 		CeL.info(`${CeL.wiki.title_link_of(talk_page_data)}: ${VA_template_token.toString()}`);
 		//console.trace([VA_template_object, VA_template_token]);
 
-	} else if (false && WikiProject_banner_shell_token) {
-		// [[w:en:Wikipedia:Talk page layout#Lead (bannerspace)]]
-
+	} else if (WikiProject_banner_shell_token) {
 		// uses the {{WikiProject banner shell}}
 		// adding the Vital article template to the bottom of the banner shell
 		wikitext_to_add = CeL.wiki.parse.template_object_to_wikitext(VA_template_name, VA_template_object);
@@ -1316,8 +1305,7 @@ function maintain_VA_template_each_talk_page(talk_page_data, main_page_title) {
 		// There are copies @ 20201008.fix_anchor.js
 		wikitext_to_add = CeL.wiki.parse.template_object_to_wikitext(VA_template_name, VA_template_object);
 		CeL.info(`${CeL.wiki.title_link_of(talk_page_data)}: Add ${wikitext_to_add.trim()}`);
-		// [[w:en:Wikipedia:Talk page layout#Lead (bannerspace)]]
-		parsed.insert_layout_token(wikitext_to_add, 'hatnote_templates');
+		parsed.insert_layout_token(wikitext_to_add, /* hatnote_templates */'lead_templates_end');
 	}
 
 	const wikitext = parsed.toString();

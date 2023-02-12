@@ -34,8 +34,6 @@ The `replace_tool.replace()` will:
 # 是否應採用 [[new|old]]: using {keep_display_text : true} to preserve title displayed. Default: discard title
 # 檢查重定向："株式会社[[リクルート]]" → "[[株式会社リクルート]]" instead of "株式会社[[リクルートホールディングス]]"
 
-移動 category 時應注意是否需要修改 DEFAULTSORTKEY
-另須注意 {{Catmore}} 可能出現斷鏈：[[w:ja:Special:Diff/93070649]]
 
 TODO:
 自動處理move from之繁簡轉換
@@ -62,7 +60,6 @@ require('../wiki loader.js');
 
 // Load modules.
 CeL.run([
-	'application.net.wiki.template_functions',
 	// for CeL.assert()
 	'application.debug.log',
 	// 載入不同地區語言的功能 for CeL.gettext()。
@@ -131,7 +128,7 @@ async function get_all_sections(meta_configuration) {
 
 		// TODO: 必須避免如 <nowiki>{{確認}}</nowiki>
 
-		matched = section_wikitext.match(/{{ *(Doing|BOTREQ *\| *(?:着手|調査中|準備中|作業中|仕様)) *[|}]/);
+		matched = section_wikitext.match(/{{ *(Doing|BOTREQ *\| *(?:着手|準備中|作業中|仕様)) *[|}]/);
 		if (matched) {
 			set_process('doing');
 		}
@@ -165,7 +162,7 @@ async function get_all_sections(meta_configuration) {
 			return;
 		}
 
-		const task_configuration_from_section = await get_move_configuration_from_section(meta_configuration, section, true);
+		const task_configuration_from_section = get_move_configuration_from_section(meta_configuration, section, true);
 		if (task_configuration_from_section) {
 			section_data.task_configuration = task_configuration_from_section;
 		}
@@ -530,12 +527,6 @@ async function guess_and_fulfill_meta_configuration(wiki, meta_configuration) {
 	}
 
 	if (!meta_configuration.diff_id) {
-		if (use_language === 'zh' || use_language === 'cmn') {
-			CeL.error([guess_and_fulfill_meta_configuration.name + ': ', {
-				T: '請注意標題繁體簡體必須相符！'
-			}]);
-			// e.g., 刪除小天體模板時，[[Template:小天体]] redirect to [[Template:小天體]]?
-		}
 		// gettext_config:{"id":"unable-to-extract-the-revision-difference-id-from-page-edit-summary-of-$1"}
 		throw new Error(CeL.gettext('Unable to extract the revision difference id from page edit summary of %1!', CeL.wiki.title_link_of(requests_page)));
 	}
@@ -544,7 +535,7 @@ async function guess_and_fulfill_meta_configuration(wiki, meta_configuration) {
 }
 
 // Check if there are default move configurations.
-async function get_move_configuration_from_section(meta_configuration, section, no_export) {
+function get_move_configuration_from_section(meta_configuration, section, no_export) {
 	function get_discussion_link(meta_token) {
 		let discussion_link;
 		section.each.call(meta_token, 'link', token => {
@@ -590,17 +581,17 @@ async function get_move_configuration_from_section(meta_configuration, section, 
 
 	//console.trace(meta_configuration.get_task_configuration_from);
 	if (meta_configuration.get_task_configuration_from === 'table') {
-		await section.each('table', async table => {
+		section.each('table', table => {
 			if (!meta_configuration.caption || table.caption === meta_configuration.caption) {
-				await parse_move_pairs_from_link(table, task_configuration_from_section, meta_configuration);
+				parse_move_pairs_from_link(table, task_configuration_from_section, meta_configuration);
 			}
 		});
 	} else if (meta_configuration.get_task_configuration_from === 'list') {
-		await section.each('list', async list_token => {
+		section.each('list', list_token => {
 			//console.log(list_token);
 			//console.log(meta_configuration);
 			if (list_token.length >= (meta_configuration.min_list_length || 3)) {
-				await parse_move_pairs_from_link(list_token, task_configuration_from_section, meta_configuration);
+				parse_move_pairs_from_link(list_token, task_configuration_from_section, meta_configuration);
 			}
 		});
 	}
@@ -659,7 +650,6 @@ async function get_move_configuration_from_section(meta_configuration, section, 
 			//console.log(token.parameters[index]);
 			let link = typeof index === 'number' ? token.parameters[index].toString().replace(/<!--[\s\S]*-->/g, '').trim().replace(/{{!}}/g, '|') : index;
 			if (!keep_link && match_link(link)) {
-				CeL.error(`${get_move_configuration_from_section.name}: 精確指定了連結形式，將僅處理完全符合此形式的連結：${link}`);
 				const parsed = CeL.wiki.parse(link);
 				// @see function prepare_operation(meta_configuration, move_configuration)
 				if (!parsed[1]) parsed[1] = '#';
@@ -671,7 +661,7 @@ async function get_move_configuration_from_section(meta_configuration, section, 
 
 		for (let index = 1; token.parameters[index] && token.parameters[index + 1]; index += 2) {
 			const move_from_link = normalize_page_token(index);
-			//if (move_from_link.includes('IOS (Apple)')) { console.trace(`Ignore ${CeL.wiki.title_link_of(move_from_link)}`); continue; }
+			//if (move_from_link.includes('IOS (Apple)')) { console.trace(`Ignore ${move_from_link}`); continue; }
 			let move_to_link = convert_special_move_to(normalize_page_token(index + 1, true));
 			const task_configuration = {
 				discussion_link,
@@ -722,7 +712,7 @@ async function for_bot_requests_section(wiki, meta_configuration, for_section, o
 
 	const section_title = meta_configuration.section_title;
 	//console.trace(meta_configuration);
-	await parsed.each_section(async function (section) {
+	parsed.each_section(function (section) {
 		//console.log([section.section_title && section.section_title.title, section_title]);
 		//console.log(section.section_title);
 		if (!section.section_title || section_title && section.section_title.title !== section_title) {
@@ -730,7 +720,7 @@ async function for_bot_requests_section(wiki, meta_configuration, for_section, o
 		}
 		// console.log(section.toString());
 
-		await for_section.apply(parsed, arguments);
+		for_section.apply(parsed, arguments);
 	}, {
 		get_users: true,
 		level_filter: /*use_language === 'zh' ? 3 :*/ 2,
@@ -755,7 +745,7 @@ async function notice_to_edit(wiki, meta_configuration) {
 		summary: CeL.gettext('The requested robot task begins.')
 	};
 
-	await for_bot_requests_section(wiki, meta_configuration, async function (section) {
+	await for_bot_requests_section(wiki, meta_configuration, function (section) {
 		//console.trace(section);
 		meta_configuration.bot_requests_section = section;
 		// 委託人
@@ -763,7 +753,7 @@ async function notice_to_edit(wiki, meta_configuration) {
 		//console.trace(meta_configuration.bot_requests_user);
 
 		// 必須執行以從章節讀取設定!
-		const task_configuration_from_section = await get_move_configuration_from_section(meta_configuration, section);
+		const task_configuration_from_section = get_move_configuration_from_section(meta_configuration, section);
 		//console.trace(task_configuration_from_section);
 
 		const doing_message = meta_configuration.doing_message || (wiki.site_name() === 'jawiki' ?
@@ -948,10 +938,9 @@ async function prepare_operation(meta_configuration, move_configuration) {
 				varianttitle = await meta_configuration[KEY_wiki_session].convert_Chinese(move_from_link, { uselang: 'zh-hans' });
 			}
 			if (varianttitle === move_from_link) {
-				CeL.warn(`${prepare_operation.name}: ${CeL.wiki.title_link_of(move_from_link)} 可能是繁簡混雜？`);
-			} else if (typeof task_configuration.move_to_link === 'string') {
-				// ↑ 預防 DELETE_PAGE 之類的 Symbol。
-				CeL.warn(`${prepare_operation.name}: ${CeL.wiki.title_link_of(move_from_link)}: 亦自動轉換 ${CeL.wiki.title_link_of(varianttitle)} → ${CeL.wiki.title_link_of(task_configuration.move_to_link)}`);
+				CeL.warn(`${prepare_operation.name}: ${move_from_link} 可能是繁簡混雜？`);
+			} else {
+				CeL.warn(`${prepare_operation.name}: ${move_from_link}: 亦自動轉換 ${varianttitle} → ${task_configuration.move_to_link}`);
 				move_configuration.splice(move_configuration_index + 1, 0, [pair[0], {
 					...task_configuration,
 					//is_additional_task_for_varianttitles: true,
@@ -1156,7 +1145,7 @@ async function prepare_operation(meta_configuration, move_configuration) {
 				// https://www.mediawiki.org/wiki/API:Move
 				reason: task_configuration.summary,
 				movetalk: 1,
-				//noredirect: 1, movesubpages: 1,
+				//movesubpages: 1, noredirect: 1,
 				...task_configuration.do_move_page
 			};
 			try {
@@ -1339,7 +1328,7 @@ function text_processor_for_exturlusage(wikitext, page_data) {
 
 	if (wikitext.includes(move_from_link)) {
 		// e.g., {{Cite web|url=...}}
-		CeL.warn(`${text_processor_for_exturlusage.name}: There is still "${CeL.wiki.title_link_of(move_from_link)}" left!`);
+		CeL.warn(`${text_processor_for_exturlusage.name}: There is still "${move_from_link}" left!`);
 	}
 	if (changed)
 		return wikitext;
@@ -1501,7 +1490,7 @@ async function get_list(task_configuration, list_configuration) {
 				if (task_configuration.move_from.page_title === task_configuration.move_to.page_title && !task_configuration.move_to.display_text) {
 					if (task_configuration.move_to.display_text === '') {
 						// @see function prepare_operation()
-						CeL.error(`將替換成 [[${CeL.wiki.title_link_of(task_configuration.move_to_link)}]]。應明確指定要改成的標的，避免這種表示法。若您想保持原 display_text，可將 move_to_link 設定為 ${JSON.stringify(`${task_configuration.move_from.page_title}|${task_configuration.move_from.page_title}`)}。`);
+						CeL.error(`將替換成 [[${task_configuration.move_to_link}]]。應明確指定要改成的標的，避免這種表示法。若您想保持原 display_text，可將 move_to_link 設定為 ${JSON.stringify(`${task_configuration.move_from.page_title}|${task_configuration.move_from.page_title}`)}。`);
 					} else if (task_configuration.move_from.display_text) {
 						CeL.warn(`移動前後的頁面標題 ${JSON.stringify(list_configuration.move_from_link)} 相同，卻未設定移動後的 display_text。將會消掉符合條件連結之 display_text！`);
 					}
@@ -1610,37 +1599,8 @@ async function get_list(task_configuration, list_configuration) {
 		}
 	}
 
-	// ------------------------------------------------------------------------
-
-	let excluding_pages = new Set();
-
-	// 排除類別。
-	if (list_configuration.excluding_categories) {
-		for (const category_name of list_configuration.excluding_categories) {
-			const excluding_page_list = await wiki.categorymembers(category_name);
-			//console.trace([category_name, excluding_page_list]);
-			excluding_page_list.forEach(page_data => excluding_pages.add(page_data.title));
-		}
-		//need_unique = excluding_pages.size > 0;
-	}
-	//console.trace([list_configuration.excluding_categories, excluding_pages]);
-
-	if (excluding_pages.size > 0) {
-		const page_list_Set = new Set();
-		const new_page_list = [];
-		for (const page_data of page_list) {
-			const page_title = page_data.title;
-			if (!page_list_Set.has(page_title) && !excluding_pages.has(page_title)) {
-				page_list_Set.add(page_title);
-				new_page_list.push(page_data);
-			}
-		}
-		page_list = new_page_list;
-	} else if (need_unique) {
+	if (need_unique)
 		page_list = page_list.unique(page_data => CeL.wiki.title_of(page_data));
-	}
-	//console.trace(page_list);
-
 	if (/*list_configuration.is_tracking_category && */list_configuration.move_from.ns === wiki.namespace('Category')) {
 		page_list.forEach(page_data => {
 			if (wiki.is_namespace(page_data, 'Template') || wiki.is_namespace(page_data, 'Module')) {
@@ -1780,14 +1740,6 @@ async function main_move_process(task_configuration, meta_configuration) {
 			}));
 		}
 	}
-
-	if (task_configuration.postfix) {
-		try {
-			await task_configuration.postfix();
-		} catch (e) {
-			console.error(e);
-		}
-	}
 }
 
 // ---------------------------------------------------------------------//
@@ -1924,7 +1876,6 @@ function for_each_link(token, index, parent) {
 			// リンクを外してその文字列にして
 			parent[index] = token[2] || token[0];
 		} else {
-			console.trace(token);
 			// e.g., リダイレクト解消
 			CeL.assert(token[2] || !token[1] && this.move_from.ns === this[KEY_wiki_session].namespace('Main'), `${for_each_link.name}: namesapce must be main or category / file when delete page`);
 		}
@@ -2249,13 +2200,6 @@ function replace_template_parameter(value, parameter_name, template_token) {
 	return factor;
 }
 
-const no_essential_parameter_templates = {
-	// {{{1|{{PAGENAME}}}}}
-	Catmore: 1,
-	// {{{1-1|{{{1}}}}}}
-	リダイレクトの所属カテゴリ: 1,
-};
-
 function check_link_parameter(task_configuration, template_token, parameter_name) {
 	let options;
 	if (Array.isArray(parameter_name)) {
@@ -2271,10 +2215,8 @@ function check_link_parameter(task_configuration, template_token, parameter_name
 
 	const attribute_text = template_token.parameters[parameter_name];
 	if (!attribute_text) {
-		if ((isNaN(parameter_name) || parameter_name == 1)
-			&& (!(template_token.name in no_essential_parameter_templates)
-				|| parameter_name != no_essential_parameter_templates[template_token.name])) {
-			CeL.debug(`There is {{${template_token.name}}} without (essential) link parameter: ${JSON.stringify(parameter_name)}.`, 1, 'check_link_parameter');
+		if (isNaN(parameter_name) || parameter_name == 1) {
+			CeL.warn(`check_link_parameter: There is {{${template_token.name}}} without essential parameter: ${JSON.stringify(parameter_name)}.`);
 		}
 		return;
 	}
@@ -2423,9 +2365,6 @@ async function for_each_template(page_data, token, index, parent) {
 		'Infobox rail system-route': 'logo_filename',
 
 		リダイレクトの所属カテゴリ: '*',
-
-		// {{Cite book|...|authorlink=...|...}}
-		'Cite book': 'authorlink',
 	})) return;
 
 	// templates that ALL NUMERAL parameters are treated as links.
@@ -2461,7 +2400,6 @@ async function for_each_template(page_data, token, index, parent) {
 		About: 3,
 	}, 2)) return;
 
-	// TODO: [[w:zh:Template:Include]] 移除模板沒有被移除
 }
 
 // ---------------------------------------------------------------------//
@@ -2478,11 +2416,14 @@ async function get_move_pairs_page(page_title, options) {
 	}
 
 	const wiki = session_of_options(options);
+	options = { ...options };
+	// 避免污染。
+	delete options[KEY_wiki_session];
+
 	const list_page_data = await wiki.page(page_title, options);
 	/** {Array} parsed page content 頁面解析後的結構。 */
 	const parsed = list_page_data.parse();
 	CeL.assert([list_page_data.wikitext, parsed.toString()], 'wikitext parser check: ' + CeL.wiki.title_link_of(list_page_data));
-	options.on_page_title = list_page_data;
 
 	let section;
 	if (options.section_title) {
@@ -2505,27 +2446,20 @@ async function get_move_pairs_page(page_title, options) {
 }
 
 async function parse_move_pairs_from_page(page_title, options) {
-	const wiki = session_of_options(options);
-	if (wiki !== options) {
-		options = wiki.append_session_to_options({ allow_promise: true, ...options });
-		// 避免污染。
-		//delete options[KEY_wiki_session];
-	}
-
 	const section_token = await get_move_pairs_page(page_title, options);
 
 	const move_title_pair = options.is_list ? [] : Object.create(null);
 
 	const using_table = options.using_table || options.get_task_configuration_from === 'table';
 	if (using_table || options.caption) {
-		await section_token.each('table', async table => {
+		section_token.each('table', table => {
 			if (using_table || table.caption === options.caption)
-				await parse_move_pairs_from_link(table, move_title_pair, options);
+				parse_move_pairs_from_link(table, move_title_pair, options);
 		});
 	} else {
-		await section_token.each('list', async list_token => {
+		section_token.each('list', list_token => {
 			if (list_token.length >= (options.min_list_length || 5))
-				await parse_move_pairs_from_link(list_token, move_title_pair, options);
+				parse_move_pairs_from_link(list_token, move_title_pair, options);
 		});
 	}
 
@@ -2535,11 +2469,8 @@ async function parse_move_pairs_from_page(page_title, options) {
 //options = { ucstart: new Date('2020-05-30 09:34 UTC'), ucend: new Date('2020-05-30 09:54 UTC'), session: wiki }
 async function parse_move_pairs_from_reverse_moved_page(user_name, options) {
 	const wiki = session_of_options(options);
-	if (wiki !== options) {
-		options = { ...options };
-		// 避免污染。
-		delete options[KEY_wiki_session];
-	}
+	options = { ...options };
+	delete options[KEY_wiki_session];
 	const move_title_pair = {};
 
 	const list = await wiki.usercontribs(user_name, options);
@@ -2555,16 +2486,23 @@ async function parse_move_pairs_from_reverse_moved_page(user_name, options) {
 	return move_title_pair;
 }
 
-async function parse_move_pairs_from_link(line, move_title_pair, options) {
+function parse_move_pairs_from_link(line, move_title_pair, options) {
 	if (!line)
 		return;
 
-	// list: e.g., task/20200606.Move 500 River articles per consensus on tributary disambiguator.js
-	// table: e.g., replace/20200607.COVID-19データ関連テンプレートの一斉改名に伴う改名提案テンプレート貼付.js
-	if (line.type === 'list' || line.type === 'table') {
-		for (const _line of line) {
-			await parse_move_pairs_from_link(_line, move_title_pair, options);
+	if (line.type === 'list') {
+		//e.g., task/20200606.Move 500 River articles per consensus on tributary disambiguator.js
+		for (let index = 0; index < line.length; index++) {
+			parse_move_pairs_from_link(line[index], move_title_pair, options);
 		}
+		return;
+	}
+
+	if (line.type === 'table') {
+		//e.g., replace/20200607.COVID-19データ関連テンプレートの一斉改名に伴う改名提案テンプレート貼付.js
+		line.forEach(line => {
+			parse_move_pairs_from_link(line, move_title_pair, options);
+		});
 		return;
 	}
 
@@ -2578,17 +2516,6 @@ async function parse_move_pairs_from_link(line, move_title_pair, options) {
 		return link;
 	}
 
-	// e.g., [[w:ja:Template:Category link with count]]
-	await wiki.register_redirects(wiki.to_namespace(['C', 'Cl', 'Clc', 'Cls'], 'Template'));
-
-	await CeL.wiki.parser.parser_prototype.each.call(line, 'Template', async template_token => {
-		if (wiki.is_template(template_token, ['C', 'Cl', 'Clc', 'Cls'])) {
-			// 直接回傳連結，避免深入 {{PAGESINCATEGORY:}}。
-			return `[[:Category:${wiki.remove_namespace(template_token[1].toString())}]]`;
-			return await CeL.wiki.expand_transclusion(template_token, options);
-		}
-	}, true);
-
 	let from, to;
 	CeL.wiki.parser.parser_prototype.each.call(line, 'link', (link_token, index, parent) => {
 		// 去掉簽名之後的連結。
@@ -2597,7 +2524,7 @@ async function parse_move_pairs_from_link(line, move_title_pair, options) {
 		}
 
 		if (link_token[1]) {
-			CeL.error(`${parse_move_pairs_from_link.name}: Link with anchor: ${line}`);
+			CeL.error(`parse_move_pairs_from_link: Link with anchor: ${line}`);
 			throw new Error(`Link with anchor: ${line}`);
 		}
 		link_token = preprocess_link(link_token[0].toString());
@@ -2605,20 +2532,20 @@ async function parse_move_pairs_from_link(line, move_title_pair, options) {
 			from = link_token;
 		} else if (!to) {
 			to = link_token;
-		} else if (!options.ignore_multiple_link_warnings) {
-			CeL.error(`${parse_move_pairs_from_link.name}: Too many links: Still process ${parent[index]}`);
+		} else {
+			CeL.error(`parse_move_pairs_from_link: Too many links: Still process ${line}`);
 		}
 	});
 
 	if (!from && !to) {
-		CeL.wiki.parser.parser_prototype.each.call(line, 'url', (link, index, parent) => {
+		CeL.wiki.parser.parser_prototype.each.call(line, 'url', link => {
 			link = preprocess_link(link[0]);
 			if (!from) {
 				from = link;
 			} else if (!to) {
 				to = link;
-			} else if (!options.ignore_multiple_link_warnings) {
-				CeL.error(`${parse_move_pairs_from_link.name}: Too many urls: Still process ${parent[index]}`);
+			} else {
+				CeL.error(`parse_move_pairs_from_link: Too many links: Still process ${line}`);
 			}
 		});
 	}
@@ -2631,7 +2558,7 @@ async function parse_move_pairs_from_link(line, move_title_pair, options) {
 	//console.log([from, to]);
 	if (!from || !to) {
 		if (line.type !== 'table_attributes' && !line.type === 'caption' && !(line.type === 'table_row' && line.header_count)) {
-			CeL.error('${parse_move_pairs_from_link.name}: Cannot parse:');
+			CeL.error('parse_move_pairs_from_link: Cannot parse:');
 			console.log(line);
 		}
 		return;
@@ -2641,7 +2568,7 @@ async function parse_move_pairs_from_link(line, move_title_pair, options) {
 		|| CeL.wiki.PATTERN_BOT_NAME.test(wiki.remove_namespace(to)))
 		return;
 
-	CeL.debug(CeL.wiki.title_link_of(from) + '	→ ' + CeL.wiki.title_link_of(to), 1, parse_move_pairs_from_link.name);
+	CeL.debug(CeL.wiki.title_link_of(from) + ' → ' + CeL.wiki.title_link_of(to), 0, 'parse_move_pairs_from_link');
 	if (move_title_pair) {
 		//task_configuration_from_section[from] = to;
 		if (move_title_pair[from]) {
@@ -2663,7 +2590,7 @@ async function parse_move_pairs_from_link(line, move_title_pair, options) {
 
 async function move_via_title_pair(move_title_pair, options) {
 	const wiki = session_of_options(options);
-	CeL.info(`${parse_move_pairs_from_link.name}: ${Object.keys(move_title_pair).length} pages to move...`);
+	CeL.info(`parse_move_pairs_from_link: ${Object.keys(move_title_pair).length} pages to move...`);
 	//	console.log(move_title_pair);
 	options = {
 		movetalk: true,
